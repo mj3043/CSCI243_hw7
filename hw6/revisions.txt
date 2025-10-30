@@ -1,0 +1,9 @@
+Homework 6: Matrix ADT
+
+- Implemented opaque Matrix ADT using dynamic 2D float array
+- Correctly initialized square matrices to identity, others to zero
+- Implemented all operations: create, destroy, init, duplicate, equals, scalar_mult, mult, get/set cell/row, transpose
+- Fixed mat_print to use "%8.3f" for exact 8-character fields
+- All memory properly allocated and freed
+- All tests pass with ./RUN
+- No memory leaks (verified with valgrind)
