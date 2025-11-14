@@ -1,0 +1,41 @@
+#!/bin/bash
+#
+# Test encryption and decryption
+#
+# Usage:
+#	RUN			runs all tests
+#	RUN 2			runs only test 2
+#	RUN 1 3			runs only tests 1 and 3
+#
+
+if [ $# -gt 0 ]
+then
+	tests="$*"
+else
+	tests="1 2 3"
+fi
+
+for n in $tests
+do
+	echo Running test $n
+
+	# first, encode into a file
+	echo ./mcrypt key.$n plain.$n enc.$n
+	./mcrypt key.$n plain.$n enc.$n
+	cmp cipher.$n enc.$n
+
+	# then encode to stdout
+	echo ./mcrypt key.$n plain.$n - '>' txtenc.$n
+	./mcrypt key.$n plain.$n - > txtenc.$n
+	cmp txtcipher.$n txtenc.$n
+
+	# next, decode into a file
+	echo ./mcrypt key.$n enc.$n dec.$n
+	./mcrypt key.$n enc.$n dec.$n
+	cmp plain.$n dec.$n
+
+	# and decode to stdout
+	echo ./mcrypt key.$n enc.$n - '>' txtdec.$n
+	./mcrypt key.$n enc.$n - > txtdec.$n
+	cmp plain.$n txtdec.$n
+done
