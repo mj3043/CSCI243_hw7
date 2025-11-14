@@ -1,0 +1,22 @@
+Revisions.txt
+-------------
+Author: Munkh-Orgil Jargalsaikhan
+Course: CSCI-243
+Assignment: HW7 - Keystream Crypt Tool
+Date: 2025-11-14
+
+Revision History
+----------------
+1.0 (2025-11-14)
+- Initial implementation of mcrypt.c following project specification.
+- Implemented full command-line interface: key-file, input-file, output-file.
+- Added keystream translation using ks_create(), ks_translate(), ks_destroy().
+- Integrated KStream.c and KStream.h into build.
+- Implemented ASCII vs hex output rules for stdout mode.
+- Added full error checking for all file operations and memory allocation.
+- Implemented buffered I/O using CHUNK-sized blocks (4096 bytes).
+- Added required documentation blocks, code formatting, and coding standards.
+- Verified compilation under strict flags (-Wall -Wextra -pedantic -Werror).
+- Verified linking with KStream.o through provided header.mak.
+
+End of file.
