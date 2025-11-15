@@ -24,7 +24,6 @@
 #include <string.h>
 #include <errno.h>
 #include <ctype.h>
-#include <ctype.h>
 #include <stdint.h>
 
 /**
@@ -80,7 +79,7 @@ static unsigned long read_keyfile(const char * path)
  */
 static void print_byte_stdout(unsigned char b)
 {
-    if (isascii(b) && isprint(b)) {
+    if (b < 128 && isprint(b)) {
         (void)putchar((int)b);
     } else {
         (void)printf("%02x", (unsigned int)b);
