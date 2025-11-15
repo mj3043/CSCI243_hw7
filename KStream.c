@@ -37,7 +37,6 @@ struct KStream {
 static void key_to_bytes(unsigned long key, byte out[8]);
 static void ks_init_state(KStream * ks);
 static byte ks_next_byte(KStream * ks);
-static void ks_prime(KStream * ks);
 
 static void key_to_bytes(unsigned long key, byte out[8])
 {
@@ -81,14 +80,6 @@ static byte ks_next_byte(KStream * ks)
     return B;
 }
 
-static void ks_prime(KStream * ks)
-{
-    /* discard first 1024 bytes to reduce initial biases */
-    for (int t = 0; t < 1024; ++t) {
-        (void)ks_next_byte(ks);
-    }
-}
-
 KStream * ks_create(unsigned long key)
 {
     KStream * ks = (KStream *)malloc(sizeof(*ks));
@@ -98,7 +89,6 @@ KStream * ks_create(unsigned long key)
 
     key_to_bytes(key, ks->key);
     ks_init_state(ks);
-    ks_prime(ks);
     return ks;
 }
 
