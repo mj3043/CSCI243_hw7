@@ -89,6 +89,9 @@ KStream * ks_create(unsigned long key)
 
     key_to_bytes(key, ks->key);
     ks_init_state(ks);
+    for (int n = 0; n < 1024; ++n) {
+        (void)ks_next_byte(ks);
+    }
     return ks;
 }
 
