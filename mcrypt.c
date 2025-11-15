@@ -51,23 +51,30 @@ static unsigned long read_keyfile(const char * path)
         return (unsigned long)-1;
     }
 
-    unsigned long key = 0UL;
-    size_t got = fread(&key, sizeof(key), 1u, f);
+    unsigned char raw[8];
+size_t got = fread(raw, 1u, 8u, f);
 
-    if (got != 1u) {
-        if (feof(f)) {
-            (void)fprintf(stderr,
+if (got != 8u) {
+    if (feof(f)) {
+        fprintf(stderr,
                 "error: key file '%s' too short\n", path);
-        } else {
-            (void)fprintf(stderr,
+    } else {
+        fprintf(stderr,
                 "error: reading key file '%s'\n", path);
-        }
-        (void)fclose(f);
-        return (unsigned long)-1;
     }
+    fclose(f);
+    return (unsigned long)-1;
+}
 
-    (void)fclose(f);
-    return key;
+fclose(f);
+
+/* Combine bytes into unsigned long in defined little-endian form */
+unsigned long key = 0UL;
+for (int i = 7; i >= 0; --i) {
+    key = (key << 8) | raw[i];
+}
+
+return key;
 }
 
 /**
