@@ -10,12 +10,11 @@
  * Usage: mcrypt key-file in-file [ out-file | - ]
  *
  * Behavior:
- * - Only alphabetic characters (isalpha) are translated using the
- *   keystream. Keystream advances only for translated bytes.
- * - Newline passes through unchanged.
- * - Printable characters print as themselves in stdout mode.
- * - Non-printable characters (except newline) print as lowercase hex.
- * - When writing to a file, bytes are written as raw binary.
+ * - EVERY byte is translated using the keystream (XOR).
+ * - When output is '-', non-ASCII bytes are printed as two-digit lowercase hex.
+ * - Printable ASCII characters (including space, punctuation) are printed as-is.
+ * - Newline is printed as '\n'.
+ * - When writing to a file, raw binary bytes are written.
  */
 
 #include "KStream.h"
@@ -27,12 +26,21 @@
 #include <ctype.h>
 #include <stdint.h>
 
+/**
+ * Print usage message to stderr.
+ */
 static void usage(void)
 {
     (void)fprintf(stderr,
         "usage: mcrypt key-file in-file [ out-file | - ]\n");
 }
 
+/**
+ * Read an 8-byte unsigned long key from a binary file.
+ *
+ * @param path Path to key file
+ * @return Key value on success, -1 on error
+ */
 static unsigned long read_keyfile(const char * path)
 {
     FILE * f = fopen(path, "rb");
@@ -62,14 +70,19 @@ static unsigned long read_keyfile(const char * path)
     return key;
 }
 
+/**
+ * Print a single byte to stdout in human-readable form.
+ * - Printable ASCII → as character
+ * - Non-printable, non-ASCII → lowercase hex (e.g. 0a → "0a")
+ *
+ * @param b Byte to print
+ */
 static void print_byte_stdout(unsigned char b)
 {
-    if (b == (unsigned char)'\n') {
-        (void)putchar('\n');
-    } else if (isprint(b)) {
+    if (isascii(b) && isprint(b)) {
         (void)putchar((int)b);
     } else {
-        (void)printf("%02x", b);
+        (void)printf("%02x", (unsigned int)b);
     }
 }
 
@@ -120,55 +133,27 @@ int main(int argc, char * argv[])
         return EXIT_FAILURE;
     }
 
-    int ch;
-    unsigned char inb[1];
-    unsigned char outb[1];
+    /* Buffer for efficient translation */
+    #define BUF_SIZE 4096
+    unsigned char inbuf[BUF_SIZE];
+    unsigned char outbuf[BUF_SIZE];
+    size_t bytes_read;
 
-    while ((ch = fgetc(inf)) != EOF) {
-        unsigned char c = (unsigned char)ch;
-
-        /* newline: pass through unchanged */
-        if (c == (unsigned char)'\n') {
-            if (to_stdout) {
-                print_byte_stdout(c);
-            } else {
-                (void)fputc((int)c, outf);
-            }
-            continue;
-        }
-
-        /* Only treat bytes <128 as ASCII; keep others untouched */
-        if (c >= 128) {
-            if (to_stdout) {
-                print_byte_stdout(c);
-            } else {
-                (void)fputc((int)c, outf);
-            }
-            continue;
-        }
-
-        /* non-alphabetic ASCII → unchanged */
-        if (!isalpha(c)) {
-            if (to_stdout) {
-                print_byte_stdout(c);
-            } else {
-                (void)fputc((int)c, outf);
-            }
-            continue;
-        }
-
-        /* alphabetic → translate (keystream advances once) */
-        inb[0] = c;
-        ks_translate(ks, inb, outb, 1u);
-        unsigned char result = outb[0];
+    /* Process file in chunks */
+    while ((bytes_read = fread(inbuf, 1, BUF_SIZE, inf)) > 0) {
+        /* Translate EVERY byte */
+        ks_translate(ks, inbuf, outbuf, bytes_read);
 
         if (to_stdout) {
-            print_byte_stdout(result);
+            for (size_t i = 0; i < bytes_read; ++i) {
+                print_byte_stdout(outbuf[i]);
+            }
         } else {
-            (void)fputc((int)result, outf);
+            (void)fwrite(outbuf, 1, bytes_read, outf);
         }
     }
 
+    /* Cleanup */
     ks_destroy(ks);
     (void)fclose(inf);
     if (outf != NULL) {
