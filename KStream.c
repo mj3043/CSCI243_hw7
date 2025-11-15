@@ -77,10 +77,8 @@ KStream * ks_create(const unsigned char key_bytes[8])
         return NULL;
     }
 
-    /* Store key bytes in REVERSE order (interpret as big-endian) */
-    for (int i = 0; i < 8; ++i) {
-        ks->key[i] = key_bytes[7 - i];
-    }
+    /* Copy key bytes exactly as read from file */
+    memcpy(ks->key, key_bytes, 8);
     
     ks_init_state(ks);
     
