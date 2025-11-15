@@ -40,10 +40,14 @@ static byte ks_next_byte(KStream * ks);
 
 static void key_to_bytes(unsigned long key, byte out[8])
 {
-    for (int k = 0; k < 8; ++k) {
-        out[7 - k] = (byte)(key & 0xFFUL);
-        key >>= 8;
-    }
+    out[0] = (byte)(key >> 56) & 0xFF;
+    out[1] = (byte)(key >> 48) & 0xFF;
+    out[2] = (byte)(key >> 40) & 0xFF;
+    out[3] = (byte)(key >> 32) & 0xFF;
+    out[4] = (byte)(key >> 24) & 0xFF;
+    out[5] = (byte)(key >> 16) & 0xFF;
+    out[6] = (byte)(key >>  8) & 0xFF;
+    out[7] = (byte)(key >>  0) & 0xFF;
 }
 
 static void ks_init_state(KStream * ks)
