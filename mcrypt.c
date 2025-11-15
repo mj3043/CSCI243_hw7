@@ -72,16 +72,15 @@ static int read_keyfile(const char * path, unsigned char key_bytes[8])
 
 /**
  * Print a single byte to stdout in human-readable form.
- * - Printable ASCII → as character
- * - Non-printable, non-ASCII → lowercase hex (e.g. 0a → "0a")
+ * - Printable ASCII (including space) → as character
+ * - Non-printable or non-ASCII → lowercase hex (e.g. 0a → "0a")
  *
  * @param b Byte to print
  */
 static void print_byte_stdout(unsigned char b)
 {
-    if (b == '\n') {
-        (void)putchar('\n');
-    } else if (b < 128 && isprint(b)) {
+    /* Check if it's printable ASCII (space through ~) */
+    if (b >= 32 && b <= 126) {
         (void)putchar((int)b);
     } else {
         (void)printf("%02x", (unsigned int)b);
