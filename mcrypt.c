@@ -79,7 +79,9 @@ static unsigned long read_keyfile(const char * path)
  */
 static void print_byte_stdout(unsigned char b)
 {
-    if (b < 128 && isprint(b)) {
+    if (b == '\n') {
+        (void)putchar('\n');
+    } else if (b < 128 && isprint(b)) {
         (void)putchar((int)b);
     } else {
         (void)printf("%02x", (unsigned int)b);
