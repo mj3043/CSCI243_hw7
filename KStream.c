@@ -40,9 +40,8 @@ static byte ks_next_byte(KStream * ks);
 
 static void key_to_bytes(unsigned long key, byte out[8])
 {
-    /* little-endian extraction of eight bytes */
     for (int k = 0; k < 8; ++k) {
-        out[k] = (byte)(key & 0xFFUL);
+        out[7 - k] = (byte)(key & 0xFFUL);
         key >>= 8;
     }
 }
