@@ -3,40 +3,36 @@
  *
  * Author:  Munkh-Orgil Jargalsaikhan
  * Date:    2025-11-14
- * Version: 1.1
+ * Version: 1.3
  *
  * Main program for keystream-based file translation.
  *
  * Usage: mcrypt key-file in-file [ out-file | - ]
  *
- * If out-file is '-', output is printed to stdout. Printable characters
- * are printed as-is; non-printables are printed as two lowercase hex
- * digits.
+ * Behavior:
+ * - Only alphabetic characters (isalpha) are translated using the
+ *   keystream. Keystream advances only for translated bytes.
+ * - Newline passes through unchanged.
+ * - Printable characters print as themselves in stdout mode.
+ * - Non-printable characters (except newline) print as lowercase hex.
+ * - When writing to a file, bytes are written as raw binary.
  */
 
 #include "KStream.h"
 
-#include <stdio.h>     /* FILE, fopen, fread, fwrite, putchar, printf */
-#include <stdlib.h>    /* EXIT_SUCCESS, EXIT_FAILURE, malloc, free    */
-#include <string.h>    /* strcmp, strerror                            */
-#include <errno.h>     /* errno                                        */
-#include <ctype.h>     /* isprint                                      */
-#include <stdint.h>    /* uint8_t                                      */
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <errno.h>
+#include <ctype.h>
+#include <stdint.h>
 
-/* Print correct usage message. */
 static void usage(void)
 {
     (void)fprintf(stderr,
         "usage: mcrypt key-file in-file [ out-file | - ]\n");
 }
 
-/**
- * read_keyfile - read an unsigned long key from a binary key file.
- *
- * @path: path to key file
- *
- * Returns: key on success, or (unsigned long)-1 on error.
- */
 static unsigned long read_keyfile(const char * path)
 {
     FILE * f = fopen(path, "rb");
@@ -66,6 +62,17 @@ static unsigned long read_keyfile(const char * path)
     return key;
 }
 
+static void print_byte_stdout(unsigned char b)
+{
+    if (b == (unsigned char)'\n') {
+        (void)putchar('\n');
+    } else if (isprint(b)) {
+        (void)putchar((int)b);
+    } else {
+        (void)printf("%02x", b);
+    }
+}
+
 int main(int argc, char * argv[])
 {
     if (argc != 4) {
@@ -92,7 +99,6 @@ int main(int argc, char * argv[])
 
     int to_stdout = (strcmp(outpath, "-") == 0);
     FILE * outf = NULL;
-
     if (!to_stdout) {
         outf = fopen(outpath, "wb");
         if (outf == NULL) {
@@ -106,8 +112,7 @@ int main(int argc, char * argv[])
 
     KStream * ks = ks_create(key);
     if (ks == NULL) {
-        (void)fprintf(stderr,
-            "error: failed to initialize keystream\n");
+        (void)fprintf(stderr, "error: failed to initialize keystream\n");
         (void)fclose(inf);
         if (outf != NULL) {
             (void)fclose(outf);
@@ -115,65 +120,57 @@ int main(int argc, char * argv[])
         return EXIT_FAILURE;
     }
 
-    enum { CHUNK = 4096 };
-    unsigned char * inbuf  = malloc(CHUNK);
-    unsigned char * outbuf = malloc(CHUNK);
+    int ch;
+    unsigned char inb[1];
+    unsigned char outb[1];
 
-    if (inbuf == NULL || outbuf == NULL) {
-        (void)fprintf(stderr, "error: memory allocation failed\n");
-        free(inbuf);
-        free(outbuf);
-        ks_destroy(ks);
-        (void)fclose(inf);
-        if (outf != NULL) {
-            (void)fclose(outf);
-        }
-        return EXIT_FAILURE;
-    }
+    while ((ch = fgetc(inf)) != EOF) {
+        unsigned char c = (unsigned char)ch;
 
-    while (1) {
-        size_t nread = fread(inbuf, 1u, CHUNK, inf);
-        if (nread == 0u) {
-            break;
+        /* newline: pass through unchanged */
+        if (c == (unsigned char)'\n') {
+            if (to_stdout) {
+                print_byte_stdout(c);
+            } else {
+                (void)fputc((int)c, outf);
+            }
+            continue;
         }
 
-        ks_translate(ks, inbuf, outbuf, nread);
+        /* Only treat bytes <128 as ASCII; keep others untouched */
+        if (c >= 128) {
+            if (to_stdout) {
+                print_byte_stdout(c);
+            } else {
+                (void)fputc((int)c, outf);
+            }
+            continue;
+        }
+
+        /* non-alphabetic ASCII → unchanged */
+        if (!isalpha(c)) {
+            if (to_stdout) {
+                print_byte_stdout(c);
+            } else {
+                (void)fputc((int)c, outf);
+            }
+            continue;
+        }
+
+        /* alphabetic → translate (keystream advances once) */
+        inb[0] = c;
+        ks_translate(ks, inb, outb, 1u);
+        unsigned char result = outb[0];
 
         if (to_stdout) {
-            for (size_t i = 0u; i < nread; ++i) {
-                unsigned char b = outbuf[i];
-
-                if (isprint((unsigned char)b)) {
-                    (void)putchar((int)b);
-                } else {
-                    (void)printf("%02x", b);
-                }
-            }
-            (void)fflush(stdout);
+            print_byte_stdout(result);
         } else {
-            size_t wrote = fwrite(outbuf, 1u, nread, outf);
-            if (wrote != nread) {
-                (void)fprintf(stderr,
-                    "error: failed to write to '%s'\n", outpath);
-                free(inbuf);
-                free(outbuf);
-                ks_destroy(ks);
-                (void)fclose(inf);
-                (void)fclose(outf);
-                return EXIT_FAILURE;
-            }
-        }
-
-        if (nread < (size_t)CHUNK) {
-            break;
+            (void)fputc((int)result, outf);
         }
     }
 
-    free(inbuf);
-    free(outbuf);
     ks_destroy(ks);
     (void)fclose(inf);
-
     if (outf != NULL) {
         (void)fclose(outf);
     }

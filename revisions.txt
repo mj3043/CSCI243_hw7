@@ -18,5 +18,6 @@ Revision History
 - Added required documentation blocks, code formatting, and coding standards.
 - Verified compilation under strict flags (-Wall -Wextra -pedantic -Werror).
 - Verified linking with KStream.o through provided header.mak.
+- Fixed test 4, 6, 8, 10, 12 by fixing the loop.
 
 End of file.
