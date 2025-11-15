@@ -40,15 +40,11 @@ static byte ks_next_byte(KStream * ks);
 
 static void key_to_bytes(unsigned long key, byte out[8])
 {
-    /* Big-endian: out[0] = MSB, out[7] = LSB */
-    out[0] = (byte)((key >> 56) & 0xFF);
-    out[1] = (byte)((key >> 48) & 0xFF);
-    out[2] = (byte)((key >> 40) & 0xFF);
-    out[3] = (byte)((key >> 32) & 0xFF);
-    out[4] = (byte)((key >> 24) & 0xFF);
-    out[5] = (byte)((key >> 16) & 0xFF);
-    out[6] = (byte)((key >>  8) & 0xFF);
-    out[7] = (byte)((key >>   0) & 0xFF);
+    /* Little-endian: out[0] = LSB, out[7] = MSB */
+    for (int i = 0; i < 8; ++i) {
+        out[i] = (byte)(key & 0xFF);
+        key >>= 8;
+    }
 }
 
 static void ks_init_state(KStream * ks)
