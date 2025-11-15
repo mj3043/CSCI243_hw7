@@ -3,12 +3,12 @@
  *
  * Author: Munkh-Orgil Jargalsaikhan
  * Date:   2025-11-14
- * Version: 1.0
+ * Version: 1.1
  *
  * Keystream ADT interface for an RC4-like stream cipher.
  *
  * Design:
- *  - ks_create accepts an unsigned long key (client reads key file).
+ *  - ks_create accepts an 8-byte key array (client reads key file).
  *  - ks_translate requires client-supplied input and output buffers.
  *
  * Build with: gcc -std=c99 -Wall -Wextra -pedantic -Werror
@@ -30,17 +30,16 @@ typedef struct KStream KStream;
 /**
  * ks_create - construct and initialize a KStream instance.
  *
- * @key:  unsigned long key value (interpreted as eight bytes,
- *        little-endian).
+ * @key_bytes:  pointer to 8-byte key array read directly from key file.
  *
  * Returns: pointer to a newly allocated KStream on success, or NULL
  *          if memory allocation fails.
  *
- * @pre: client has read the key value from a key file and supplies it.
+ * @pre: client has read 8 bytes from the key file into key_bytes.
  * @post: returned KStream is initialized and primed (first 1024 bytes
  *        discarded) and ready for translation.
  */
-KStream * ks_create(unsigned long key);
+KStream * ks_create(const unsigned char key_bytes[8]);
 
 /**
  * ks_destroy - free storage associated with a KStream instance.

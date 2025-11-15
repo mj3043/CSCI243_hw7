@@ -3,7 +3,7 @@
  *
  * Author:  Munkh-Orgil Jargalsaikhan
  * Date:    2025-11-14
- * Version: 1.3
+ * Version: 1.4
  *
  * Main program for keystream-based file translation.
  *
@@ -36,45 +36,38 @@ static void usage(void)
 }
 
 /**
- * Read an 8-byte unsigned long key from a binary file.
+ * Read an 8-byte key from a binary file.
  *
  * @param path Path to key file
- * @return Key value on success, -1 on error
+ * @param key_bytes Output buffer for 8 key bytes
+ * @return 0 on success, -1 on error
  */
-static unsigned long read_keyfile(const char * path)
+static int read_keyfile(const char * path, unsigned char key_bytes[8])
 {
     FILE * f = fopen(path, "rb");
     if (f == NULL) {
         (void)fprintf(stderr,
             "error: cannot open key file '%s': %s\n",
             path, strerror(errno));
-        return (unsigned long)-1;
+        return -1;
     }
 
-    unsigned char raw[8];
-size_t got = fread(raw, 1u, 8u, f);
+    size_t got = fread(key_bytes, 1u, 8u, f);
 
-if (got != 8u) {
-    if (feof(f)) {
-        fprintf(stderr,
-                "error: key file '%s' too short\n", path);
-    } else {
-        fprintf(stderr,
-                "error: reading key file '%s'\n", path);
+    if (got != 8u) {
+        if (feof(f)) {
+            fprintf(stderr,
+                    "error: key file '%s' too short\n", path);
+        } else {
+            fprintf(stderr,
+                    "error: reading key file '%s'\n", path);
+        }
+        fclose(f);
+        return -1;
     }
+
     fclose(f);
-    return (unsigned long)-1;
-}
-
-fclose(f);
-
-/* Combine bytes into unsigned long in defined little-endian form */
-unsigned long key = 0UL;
-for (int i = 7; i >= 0; --i) {
-    key = (key << 8) | raw[i];
-}
-
-return key;
+    return 0;
 }
 
 /**
@@ -106,8 +99,8 @@ int main(int argc, char * argv[])
     const char * inpath  = argv[2];
     const char * outpath = argv[3];
 
-    unsigned long key = read_keyfile(keypath);
-    if (key == (unsigned long)-1) {
+    unsigned char key_bytes[8];
+    if (read_keyfile(keypath, key_bytes) != 0) {
         return EXIT_FAILURE;
     }
 
@@ -132,7 +125,7 @@ int main(int argc, char * argv[])
         }
     }
 
-    KStream * ks = ks_create(key);
+    KStream * ks = ks_create(key_bytes);
     if (ks == NULL) {
         (void)fprintf(stderr, "error: failed to initialize keystream\n");
         (void)fclose(inf);

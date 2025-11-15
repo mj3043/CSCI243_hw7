@@ -3,7 +3,7 @@
  *
  * Author: Munkh-Orgil Jargalsaikhan
  * Date:   2025-11-14
- * Version: 1.0
+ * Version: 1.1
  *
  * Implementation of the KStream ADT declared in KStream.h.
  *
@@ -13,7 +13,7 @@
 #include "KStream.h"
 
 #include <stdlib.h>  /* malloc, free */
-#include <string.h>  /* memset */
+#include <string.h>  /* memset, memcpy */
 #include <stdint.h>  /* uint8_t */
 #include <assert.h>
 
@@ -24,7 +24,7 @@ typedef unsigned char byte; /**< 8-bit byte type alias */
  *
  * S:    permutation array (256 bytes).
  * i, j: indices used by the generator.
- * key: key bytes (8 bytes).
+ * key: key bytes (8 bytes) - stored directly as read from file.
  */
 struct KStream {
     byte S[256];
@@ -34,18 +34,8 @@ struct KStream {
 };
 
 /* Forward declarations for static helpers */
-static void key_to_bytes(unsigned long key, byte out[8]);
 static void ks_init_state(KStream * ks);
 static byte ks_next_byte(KStream * ks);
-
-static void key_to_bytes(unsigned long key, byte out[8])
-{
-    /* Little-endian: out[0] = LSB, out[7] = MSB */
-    for (int i = 0; i < 8; ++i) {
-        out[i] = (byte)(key & 0xFF);
-        key >>= 8;
-    }
-}
 
 static void ks_init_state(KStream * ks)
 {
@@ -80,15 +70,19 @@ static byte ks_next_byte(KStream * ks)
     return B;
 }
 
-KStream * ks_create(unsigned long key)
+KStream * ks_create(const unsigned char key_bytes[8])
 {
     KStream * ks = (KStream *)malloc(sizeof(*ks));
     if (ks == NULL) {
         return NULL;
     }
 
-    key_to_bytes(key, ks->key);
+    /* Copy key bytes directly as read from file */
+    memcpy(ks->key, key_bytes, 8);
+    
     ks_init_state(ks);
+    
+    /* Prime the keystream by discarding first 1024 bytes */
     for (int n = 0; n < 1024; ++n) {
         (void)ks_next_byte(ks);
     }
